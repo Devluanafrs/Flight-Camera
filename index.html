@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Camera</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #2d3436;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            margin-top: 50px;
+            font-size: 3rem;
+        }
+
+        #videoElement {
+            border: 5px solid #0984e3;
+            border-radius: 10px;
+            max-width: 100%;
+            width: 640px;
+            height: 360px;
+        }
+
+        button {
+            background-color: #0984e3;
+            color: white;
+            font-size: 1.2rem;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin: 20px;
+        }
+
+        button:disabled {
+            background-color: #636e72;
+            cursor: not-allowed;
+        }
+
+        button:hover {
+            background-color: #74b9ff;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Flight Camera</h1>
+        <video id="videoElement" autoplay></video>
+        <div class="controls">
+            <button id="startBtn" onclick="startRecording()">Iniciar Gravação</button>
+            <button id="stopBtn" onclick="stopRecording()" disabled>Parar Gravação</button>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let recordedChunks = [];
+        let currentStream;
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById("videoElement").srcObject = stream;
+                currentStream = stream;
+
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => recordedChunks.push(event.data);
+                mediaRecorder.onstop = () => {
+                    saveVideo();
+                    stopCamera();
+                };
+                mediaRecorder.start();
+
+                document.getElementById("startBtn").disabled = true;
+                document.getElementById("stopBtn").disabled = false;
+            } catch (err) {
+                console.error("Erro ao acessar a mídia:", err);
+                alert("Erro ao acessar a câmera ou microfone.");
+            }
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            document.getElementById("startBtn").disabled = false;
+            document.getElementById("stopBtn").disabled = true;
+        }
+
+        function saveVideo() {
+            const blob = new Blob(recordedChunks, { type: "video/webm" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `video_${new Date().toISOString().replace(/[:.]/g, "_")}.webm`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            recordedChunks = [];
+        }
+
+        function stopCamera() {
+            if (currentStream) {
+                const tracks = currentStream.getTracks();
+                tracks.forEach(track => track.stop());
+                document.getElementById("videoElement").srcObject = null;
+            }
+        }
+    </script>
+</body>
+</html>
